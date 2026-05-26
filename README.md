@@ -1,2 +1,1 @@
-# NotVibeCodedSlop.github.io
-My website
+# Idk
