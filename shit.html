@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Parameter JS Executor</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .disclaimer-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .disclaimer-box h2 {
+            margin-top: 0;
+            color: #856404;
+            font-size: 1.2rem;
+        }
+        .code-example {
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="disclaimer-box">
+        <h2>⚠️ DISCLAIMER & SECURITY WARNING</h2>
+        <p>
+            <strong>This page contains an intentional Reflected Cross-Site Scripting (XSS) vulnerability.</strong> 
+            Executing untrusted JavaScript directly from URL parameters allows third parties to perform arbitrary code execution in the context of your browser session. This can lead to session hijacking, cookie theft, data exfiltration, or malicious redirects.
+        </p>
+        <p>
+            <em>This application is intended strictly for local testing, educational purposes, or isolated security demonstrations. Do not use this code on a public or production server.</em>
+        </p>
+    </div>
+
+    <h1>URL JS Executor</h1>
+    <p>If a <code>?js=</code> parameter is present in the URL, it will execute immediately on load.</p>
+
+    <p><strong>Example usage:</strong></p>
+    <div class="code-example">
+        ?js=alert('Hello%20World!')
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            // Parse the URL search parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const jsToRun = urlParams.get('js');
+
+            if (jsToRun) {
+                try {
+                    // Instantly execute the JS string using the Function constructor
+                    new Function(jsToRun)();
+                } catch (error) {
+                    console.error("Error executing URL JavaScript:", error);
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
