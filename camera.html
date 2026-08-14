@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inverse Flash & Camera Desync Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #0a0a0a;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      user-select: none;
+    }
+    .card {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      text-align: center;
+    }
+    .hz-badge {
+      display: inline-block;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #00f0ff;
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    #status-text {
+      font-size: 13px;
+      color: #aaaaaa;
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+    .display-box {
+      width: 100%;
+      height: 260px;
+      background: #000000;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      border: 1px solid #222;
+      overflow: hidden;
+    }
+    .display-box svg {
+      width: 320px;
+      height: 180px;
+    }
+    .btn {
+      background: #ff3344;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #e60000; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="hz-badge" id="hz-display">Detecting Refresh Rate...</div>
+    <h2>Complementary Inverse Flash + Desync Core</h2>
+    <div id="status-text">
+      Outer elements alternate <b>White/Black</b> then <b>Black/White</b> every frame (fusing to solid 50% gray to your eye).<br/>
+      The <b>center window/door core</b> is phase-shifted by 1 frame—breaking shutter synchronization so your phone camera records the hidden car structure!
+    </div>
+
+    <div class="display-box" id="display-box">
+      <!-- SVG Car loaded dynamically via JS script -->
+    </div>
+
+    <button id="toggle-btn" class="btn">Stop Flicker</button>
+  </div>
+
+  <script>
+    (function() {
+      const hzDisplay = document.getElementById('hz-display');
+      const displayBox = document.getElementById('display-box');
+      const toggleBtn = document.getElementById('toggle-btn');
+
+      // Car SVG broken into outer body + inverted/phase-shifted center window/door core
+      const carSVG = `
+        <svg viewBox="0 0 100 50">
+          <!-- Background Box (Toggles with main body) -->
+          <rect id="bg" x="0" y="0" width="100" height="50" fill="#000000" />
+
+          <!-- Outer Car Body & Wheels -->
+          <g id="car-outer">
+            <!-- Body shape -->
+            <path d="M10 32 L20 22 C25 22 30 14 42 14 L68 14 C75 14 82 22 88 24 L92 32 Z" />
+            <rect x="8" y="30" width="86" height="8" rx="2" />
+            <!-- Wheel wells/wheels -->
+            <circle cx="26" cy="38" r="7" />
+            <circle cx="74" cy="38" r="7" />
+          </g>
+
+          <!-- Center Window/Door Core (Phase-Shifted by 1 Frame) -->
+          <g id="car-core">
+            <!-- Wheel Rims -->
+            <circle cx="26" cy="38" r="3" />
+            <circle cx="74" cy="38" r="3" />
+            <!-- Center Windows -->
+            <path d="M32 17 L44 17 L44 26 L27 26 Z" />
+            <path d="M48 17 L64 17 L72 26 L48 26 Z" />
+            <!-- Center Door Divider Line -->
+            <rect x="45" y="17" width="2" height="18" />
+          </g>
+        </svg>
+      `;
+
+      displayBox.innerHTML = carSVG;
+
+      const bg = document.getElementById('bg');
+      const carOuter = document.getElementById('car-outer');
+      const carCore = document.getElementById('car-core');
+
+      let isRunning = true;
+      let frameCount = 0;
+
+      // Screen Refresh Rate Tracking
+      let frameTimes = [];
+      let lastTime = performance.now();
+
+      function animate(now) {
+        const delta = now - lastTime;
+        lastTime = now;
+
+        if (delta > 0 && delta < 100) {
+          frameTimes.push(1000 / delta);
+          if (frameTimes.length > 60) frameTimes.shift();
+        }
+
+        if (frameTimes.length >= 30) {
+          const avgHz = Math.round(frameTimes.reduce((a, b) => a + b) / frameTimes.length);
+          hzDisplay.textContent = `Display Rate: ~${avgHz} Hz`;
+        }
+
+        if (isRunning) {
+          frameCount++;
+          const phaseA = frameCount % 2 === 0;
+          const phaseB = !phaseA; // 1-frame offset (phase-shifted core)
+
+          // 1. Outer Body & BG complement each other perfectly
+          if (phaseA) {
+            bg.setAttribute('fill', '#000000');
+            carOuter.setAttribute('fill', '#ffffff');
+          } else {
+            bg.setAttribute('fill', '#ffffff');
+            carOuter.setAttribute('fill', '#000000');
+          }
+
+          // 2. Center Core is offset by 1 frame (phaseB)
+          if (phaseB) {
+            carCore.setAttribute('fill', '#ffffff');
+          } else {
+            carCore.setAttribute('fill', '#000000');
+          }
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      toggleBtn.addEventListener('click', () => {
+        isRunning = !isRunning;
+        toggleBtn.textContent = isRunning ? 'Stop Flicker' : 'Start Flicker';
+        if (!isRunning) {
+          bg.setAttribute('fill', '#000000');
+          carOuter.setAttribute('fill', '#ffffff');
+          carCore.setAttribute('fill', '#ff3344'); // Highlight core red when paused
+        }
+      });
+
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
